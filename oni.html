@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b12">
+<title>おにから でんわ</title>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0b12; --ink:#f4f1ea; --dim:#9a97a8;
+  --red:#d7263d; --dark:#4a0b14; --amber:#ffb347; --green:#2ec27e;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg)}
+body{
+  font-family:'M PLUS Rounded 1c',system-ui,sans-serif;color:var(--ink);
+  min-height:100dvh;overflow:hidden;user-select:none;-webkit-user-select:none;
+}
+.screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.screen.on{display:flex}
+
+/* ===== 親の設定画面 ===== */
+#setup{justify-content:flex-start;overflow-y:auto;padding:24px 18px 40px;background:#15151f}
+#setup h1{font-size:26px;font-weight:900;margin:6px 0 2px;letter-spacing:.04em}
+#setup .sub{color:var(--dim);font-size:13px;margin-bottom:18px}
+.card{width:100%;max-width:480px;background:#1f1f2c;border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.card h2{font-size:14px;color:var(--amber);margin-bottom:10px;font-weight:900}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.chip{
+  border:2px solid #343449;background:#262636;color:var(--ink);border-radius:999px;
+  padding:8px 14px;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;
+}
+.chip.sel{border-color:var(--amber);background:#3a2d12;color:#ffd48a}
+input[type=text]{
+  width:100%;font-family:inherit;font-size:18px;font-weight:800;padding:10px 12px;border-radius:12px;
+  border:2px solid #343449;background:#262636;color:var(--ink);outline:none;
+}
+input[type=text]:focus{border-color:var(--amber)}
+.suffix{display:flex;gap:8px;margin-top:8px}
+.levels{display:flex;gap:8px}
+.lv{flex:1;border-radius:14px;padding:10px 6px;text-align:center;border:2px solid #343449;background:#262636;cursor:pointer;font-weight:900}
+.lv small{display:block;font-weight:500;color:var(--dim);font-size:11px;margin-top:3px}
+.lv.sel{border-color:var(--red);background:#3b1118}
+.big{
+  width:100%;max-width:480px;border:none;border-radius:18px;padding:18px;font-size:22px;font-weight:900;
+  font-family:inherit;cursor:pointer;color:#fff;background:linear-gradient(180deg,#ff5a5a,#b5121f);
+  box-shadow:0 8px 0 #5c0810,0 14px 30px rgba(215,38,61,.35);margin-top:8px;
+}
+.big:active{transform:translateY(4px);box-shadow:0 4px 0 #5c0810}
+.note{max-width:480px;color:var(--dim);font-size:12px;line-height:1.7;margin-top:14px}
+.note b{color:#ffd48a}
+
+/* ===== 着信画面 ===== */
+#ring{background:radial-gradient(ellipse at 50% 30%,#1b1b2a,#07070c 70%);justify-content:space-between;padding:60px 20px 56px}
+.callerWrap{display:flex;flex-direction:column;align-items:center;gap:14px}
+.callerName{font-size:34px;font-weight:900;letter-spacing:.1em}
+.callerSub{color:var(--dim);font-size:15px;animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.35}}
+.avatar{
+  width:120px;height:120px;border-radius:50%;background:#2a0a10;
+  display:flex;align-items:center;justify-content:center;font-size:66px;
+  box-shadow:0 0 0 0 rgba(215,38,61,.6);animation:pulse 1.3s infinite;
+}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(215,38,61,.55)}100%{box-shadow:0 0 0 36px rgba(215,38,61,0)}}
+.ringBtns{display:flex;gap:56px}
+.rbtn{
+  width:84px;height:84px;border-radius:50%;border:none;font-size:38px;color:#fff;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(0,0,0,.5);
+}
+.rbtn.ans{background:var(--green);animation:wiggle .7s infinite}
+.rbtn.dec{background:var(--red)}
+@keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg)}75%{transform:rotate(14deg)}}
+.rlabel{font-size:13px;color:var(--dim);text-align:center;margin-top:8px}
+
+/* ===== 通話画面 ===== */
+#call{background:#0b0b12;justify-content:space-between;padding:28px 18px 24px;transition:background .8s}
+#call.lv1{background:radial-gradient(ellipse at 50% 20%,#201a24,#0b0b12 70%)}
+#call.lv2{background:radial-gradient(ellipse at 50% 20%,#3a0f16,#0b0608 70%)}
+#call.lv3{background:radial-gradient(ellipse at 50% 20%,#6b0a14,#120204 70%)}
+#vignette{position:fixed;inset:0;pointer-events:none;box-shadow:inset 0 0 0 0 rgba(120,0,0,0);transition:box-shadow 1s}
+#call.lv2 #vignette{box-shadow:inset 0 0 120px 20px rgba(120,0,0,.55)}
+#call.lv3 #vignette{box-shadow:inset 0 0 160px 60px rgba(170,0,0,.8)}
+#flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none}
+#flash.go{animation:flash .18s}
+@keyframes flash{0%{opacity:.85}100%{opacity:0}}
+.shake1{animation:shake .5s infinite}
+.shake2{animation:shake .18s infinite}
+@keyframes shake{0%,100%{transform:translate(0,0)}25%{transform:translate(-4px,3px)}50%{transform:translate(4px,-2px)}75%{transform:translate(-3px,-4px)}}
+.timer{color:var(--dim);font-size:14px;letter-spacing:.1em}
+
+/* 鬼の顔(CSS) */
+.oni{position:relative;width:min(70vw,260px);aspect-ratio:1;transition:transform .6s}
+.face{
+  position:absolute;inset:6% 4% 2% 4%;border-radius:48% 48% 44% 44%;
+  background:radial-gradient(circle at 40% 30%,#ff5a5a,#b5121f 60%,#6e0611);
+  box-shadow:inset 0 -18px 30px rgba(0,0,0,.35),0 20px 50px rgba(0,0,0,.6);
+  transition:background .8s;
+}
+.lv3 .face{background:radial-gradient(circle at 40% 30%,#ff3b3b,#8a0010 60%,#3a0008)}
+.horn{
+  position:absolute;top:-4%;width:16%;height:30%;background:linear-gradient(180deg,#fff2c9,#c9a24a);
+  border-radius:50% 50% 20% 20%;box-shadow:inset -4px 0 6px rgba(0,0,0,.25);
+}
+.horn.l{left:20%;transform:rotate(-18deg)}.horn.r{right:20%;transform:rotate(18deg)}
+.hair{position:absolute;top:2%;left:14%;right:14%;height:26%;border-radius:50% 50% 20% 20%;
+  background:radial-gradient(circle at 50% 100%,#2b1c10,#0d0906);z-index:1}
+.eye{
+  position:absolute;top:40%;width:19%;height:19%;background:#fff4c2;border-radius:50%;
+  box-shadow:inset 0 -5px 10px rgba(0,0,0,.25);overflow:hidden;transition:transform .5s
+}
+.eye.l{left:20%}.eye.r{right:20%}
+.pupil{position:absolute;left:50%;top:50%;width:48%;height:48%;background:#120404;border-radius:50%;transform:translate(-50%,-50%);transition:all .4s}
+.lv2 .pupil{width:36%;height:36%}
+.lv3 .pupil{width:28%;height:28%;background:#ffd400;box-shadow:0 0 10px #ff0}
+.brow{
+  position:absolute;top:32%;width:24%;height:7%;background:#120404;border-radius:6px;transition:transform .5s
+}
+.brow.l{left:17%;transform:rotate(-8deg)}.brow.r{right:17%;transform:rotate(8deg)}
+.lv1 .brow.l{transform:rotate(-4deg)}.lv1 .brow.r{transform:rotate(4deg)}
+.lv2 .brow.l{transform:rotate(18deg) translateY(10%)}.lv2 .brow.r{transform:rotate(-18deg) translateY(10%)}
+.lv3 .brow.l{transform:rotate(30deg) translateY(28%)}.lv3 .brow.r{transform:rotate(-30deg) translateY(28%)}
+.mouth{
+  position:absolute;left:50%;bottom:16%;width:40%;height:14%;transform:translateX(-50%);
+  background:#2a0206;border-radius:8px 8px 40% 40%;overflow:hidden;transition:all .5s;
+}
+.lv2 .mouth{height:22%;width:48%;border-radius:20% 20% 50% 50%}
+.lv3 .mouth{height:30%;width:56%;border-radius:30% 30% 50% 50%}
+.mouth.talk{animation:talk .22s infinite alternate}
+@keyframes talk{to{transform:translateX(-50%) scaleY(.6)}}
+.fang{position:absolute;top:0;width:16%;height:50%;background:#fff;clip-path:polygon(0 0,100% 0,50% 100%)}
+.fang.l{left:14%}.fang.r{right:14%}
+.lv3 .fang{height:70%}
+
+.bubble{
+  width:100%;max-width:480px;min-height:92px;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:14px 16px;
+  font-size:20px;font-weight:800;line-height:1.55;text-align:center;backdrop-filter:blur(6px);
+}
+.bubble.lv3{color:#ffd0d0;font-size:21px}
+.bubble{overflow-wrap:anywhere;word-break:keep-all}
+
+/* 親用コントロール(下部・目立たない) */
+.ctrl{width:100%;max-width:480px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.ctrlRow{display:flex;gap:10px;width:100%}
+.cbtn{
+  flex:1;border:none;border-radius:14px;padding:14px 8px;font-family:inherit;font-weight:900;font-size:15px;cursor:pointer;color:#fff;
+}
+.cbtn.more{background:#5b1a24;border:1px solid #8c2a38}
+.cbtn.forgive{background:#1f5a3f;border:1px solid #2ec27e}
+.cbtn.hang{background:#333;border:1px solid #555}
+.cbtn:disabled{opacity:.35}
+.lvdots{display:flex;gap:6px;align-items:center;color:var(--dim);font-size:12px}
+.dot{width:10px;height:10px;border-radius:50%;background:#333}
+.dot.on{background:var(--red);box-shadow:0 0 8px var(--red)}
+
+/* ===== 終了画面 ===== */
+#end{background:#15151f;gap:14px;text-align:center}
+#end .emoji{font-size:64px}
+#end h2{font-size:22px;font-weight:900}
+#end p{color:var(--dim);font-size:14px;line-height:1.7;max-width:420px}
+.ghost{border:2px solid #444;background:transparent;color:var(--ink);border-radius:14px;padding:12px 20px;font-family:inherit;font-weight:800;font-size:15px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<!-- ============ 親の設定 ============ -->
+<section id="setup" class="screen on">
+  <h1>👹 おにから でんわ</h1>
+  <div class="sub">保護者が設定して「電話をかける」を押すと、着信画面になります</div>
+
+  <div class="card">
+    <h2>こどもの なまえ</h2>
+    <input type="text" id="name" placeholder="例：はると" maxlength="10">
+    <div class="suffix row" id="suffix">
+      <button class="chip sel" data-v="くん">くん</button>
+      <button class="chip" data-v="ちゃん">ちゃん</button>
+      <button class="chip" data-v="">なし</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>おにが おこっている りゆう</h2>
+    <div class="row" id="reason">
+      <button class="chip sel" data-v="sleep">ねない</button>
+      <button class="chip" data-v="teeth">はみがきしない</button>
+      <button class="chip" data-v="tidy">かたづけない</button>
+      <button class="chip" data-v="eat">ごはんをたべない</button>
+      <button class="chip" data-v="listen">いうことをきかない</button>
+      <button class="chip" data-v="bath">おふろにはいらない</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>こわさの じょうげん</h2>
+    <div class="levels" id="maxlv">
+      <div class="lv" data-v="1">😐 1<small>ひくい声で<br>たずねる</small></div>
+      <div class="lv" data-v="2">😠 2<small>声が低くなり<br>画面が赤く</small></div>
+      <div class="lv sel" data-v="3">👹 3<small>どなる・ゆれる<br>「いまからいく」</small></div>
+    </div>
+    <div style="height:10px"></div>
+    <h2>こわくなる タイミング</h2>
+    <div class="row" id="auto">
+      <button class="chip sel" data-v="0">親がボタンで進める</button>
+      <button class="chip" data-v="12">12秒ごとに自動</button>
+      <button class="chip" data-v="20">20秒ごとに自動</button>
+    </div>
+  </div>
+
+  <button class="big" id="dial">📞 電話をかける</button>
+
+  <div class="note">
+    <b>使い方のコツ</b><br>
+    ・音量を上げてから「電話をかける」。着信音が鳴り、画面を子どもに見せます。<br>
+    ・通話中は下の <b>「もっとこわく」</b> で段階を上げ、子どもが「やる」と言ったら <b>「ゆるす」</b> を押すと、鬼が約束して電話を切ります。<br>
+    ・最後は必ず「ゆるす」で終わると、子どもが安心して終われます。レベル3は短めがおすすめです。
+  </div>
+</section>
+
+<!-- ============ 着信 ============ -->
+<section id="ring" class="screen">
+  <div class="callerWrap">
+    <div class="avatar">👹</div>
+    <div class="callerName">おに</div>
+    <div class="callerSub">ちゃくしん中…</div>
+  </div>
+  <div>
+    <div class="ringBtns">
+      <div><button class="rbtn dec" id="decline">✕</button><div class="rlabel">ことわる</div></div>
+      <div><button class="rbtn ans" id="answer">📞</button><div class="rlabel">でる</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 通話中 ============ -->
+<section id="call" class="screen lv1">
+  <div id="vignette"></div>
+  <div id="flash"></div>
+  <div class="timer" id="timer">おに　00:00</div>
+
+  <div class="oni" id="oni">
+    <div class="horn l"></div><div class="horn r"></div>
+    <div class="face">
+      <div class="hair"></div>
+      <div class="brow l"></div><div class="brow r"></div>
+      <div class="eye l"><div class="pupil"></div></div>
+      <div class="eye r"><div class="pupil"></div></div>
+      <div class="mouth" id="mouth"><div class="fang l"></div><div class="fang r"></div></div>
+    </div>
+  </div>
+
+  <div class="bubble" id="bubble">…</div>
+
+  <div class="ctrl">
+    <div class="lvdots">こわさ <span class="dot on" id="d1"></span><span class="dot" id="d2"></span><span class="dot" id="d3"></span></div>
+    <div class="ctrlRow">
+      <button class="cbtn more" id="more">😈 もっとこわく</button>
+      <button class="cbtn forgive" id="forgive">🙆 ゆるす</button>
+    </div>
+    <div class="ctrlRow">
+      <button class="cbtn hang" id="hang">切る</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 終了 ============ -->
+<section id="end" class="screen">
+  <div class="emoji" id="endEmoji">📵</div>
+  <h2 id="endTitle">でんわが きれました</h2>
+  <p id="endMsg"></p>
+  <button class="ghost" id="again">設定にもどる</button>
+</section>
+
+<script>
+/* ========= 設定 ========= */
+const $ = s => document.querySelector(s);
+const cfg = Object.assign({name:'', suffix:'くん', reason:'sleep', maxlv:3, auto:0},
+  JSON.parse(localStorage.getItem('oniCfg')||'{}'));
+$('#name').value = cfg.name;
+function bindChips(sel, key, num){
+  const box = $(sel);
+  [...box.children].forEach(b=>{
+    b.classList.toggle('sel', String(b.dataset.v)===String(cfg[key]));
+    b.onclick = ()=>{
+      [...box.children].forEach(x=>x.classList.remove('sel')); b.classList.add('sel');
+      cfg[key] = num ? Number(b.dataset.v) : b.dataset.v; save();
+    };
+  });
+}
+bindChips('#suffix','suffix'); bindChips('#reason','reason'); bindChips('#maxlv','maxlv',true); bindChips('#auto','auto',true);
+$('#name').oninput = e => { cfg.name = e.target.value.trim(); save(); };
+function save(){ localStorage.setItem('oniCfg', JSON.stringify(cfg)); }
+
+/* ========= セリフ ========= */
+const REASON = {
+  sleep : ['まだ ねていない', 'いますぐ ねない', 'ふとんに はいって めを つぶる'],
+  teeth : ['はみがきを していない', 'すぐに はみがきを しない', 'はを ぜんぶ みがく'],
+  tidy  : ['おもちゃを かたづけていない', 'すぐに かたづけない', 'おもちゃを ぜんぶ かたづける'],
+  eat   : ['ごはんを のこしている', 'ごはんを たべない', 'ごはんを ぜんぶ たべる'],
+  listen: ['おとうさん おかあさんの いうことを きいていない', 'いうことを きかない', 'いうことを ちゃんと きく'],
+  bath  : ['おふろに はいっていない', 'すぐに おふろに はいらない', 'おふろに はいる'],
+};
+function lines(lv){
+  const n = cfg.name ? cfg.name + cfg.suffix : 'きみ';
+  const r = REASON[cfg.reason];
+  if(lv===1) return [
+    `もしもし……　おにだ。`,
+    `${n}の おうちかな？`,
+    `${r[0]}と きいたぞ。　ほんとうかな？`,
+    `おには、ぜんぶ みているぞ……`,
+  ];
+  if(lv===2) return [
+    `${n}……　おにの みみには、ぜんぶ きこえているぞ。`,
+    `${r[1]}なら……　おには、とても おこるぞ……`,
+    `いいか。　これが さいごの ちゅうこくだ。`,
+  ];
+  return [
+    `ゴォォォ……！　もう がまんできん！！`,
+    `いまから ${n}の おうちへ むかうぞ！！`,
+    `${r[2]}まで、　おには かえらんぞ！！`,
+    `まっていろ……　${n}……！！`,
+  ];
+}
+function forgiveLines(){
+  const n = cfg.name ? cfg.name + cfg.suffix : 'きみ';
+  const r = REASON[cfg.reason];
+  return [
+    `……ほう。　いいこに するのか。`,
+    `ならば、きょうは ゆるしてやろう。`,
+    `${r[2]}。　やくそくだぞ、${n}。`,
+    `おには いつでも みているからな……。　じゃあな。`,
+  ];
+}
+
+/* ========= 音(Web Audio) ========= */
+let AC=null, master=null, ringTimer=null, droneNodes=[], beatTimer=null, growlTimer=null;
+function audio(){
+  if(!AC){ AC = new (window.AudioContext||window.webkitAudioContext)(); master=AC.createGain(); master.gain.value=.9; master.connect(AC.destination); }
+  if(AC.state==='suspended') AC.resume();
+  return AC;
+}
+function tone(freq, dur, {type='sine', vol=.3, at=0, decay=true, dest=master}={}){
+  const ac=audio(), o=ac.createOscillator(), g=ac.createGain();
+  o.type=type; o.frequency.value=freq; g.gain.value=0;
+  g.gain.setValueAtTime(0, ac.currentTime+at);
+  g.gain.linearRampToValueAtTime(vol, ac.currentTime+at+.01);
+  if(decay) g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime+at+dur);
+  else g.gain.setValueAtTime(vol, ac.currentTime+at+dur-.02), g.gain.linearRampToValueAtTime(0, ac.currentTime+at+dur);
+  o.connect(g); g.connect(dest); o.start(ac.currentTime+at); o.stop(ac.currentTime+at+dur+.05);
+}
+function ringOnce(){
+  // 日本の電話っぽい 400Hz+ 16Hz 揺れ、1秒鳴って2秒休む
+  const ac=audio(), g=ac.createGain(), lfo=ac.createOscillator(), lg=ac.createGain();
+  g.gain.value=.25; lfo.frequency.value=16; lg.gain.value=.25; lfo.connect(lg); lg.connect(g.gain);
+  g.connect(master); lfo.start(); lfo.stop(ac.currentTime+1.05);
+  [400, 480].forEach(f=> tone(f, 1, {type:'square', vol:.12, decay:false, dest:g}));
+  if(navigator.vibrate) navigator.vibrate([400,150,400]);
+}
+function startRing(){ ringOnce(); ringTimer=setInterval(ringOnce, 3000); }
+function stopRing(){ clearInterval(ringTimer); ringTimer=null; if(navigator.vibrate) navigator.vibrate(0); }
+
+function drone(level){
+  stopDrone();
+  if(level<2) return;
+  const ac=audio();
+  const g=ac.createGain(); g.gain.value=0; g.gain.linearRampToValueAtTime(level===3?.22:.12, ac.currentTime+1.5);
+  const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value= level===3?220:140;
+  [55, 55.8, 82.4].forEach(f=>{ const o=ac.createOscillator(); o.type='sawtooth'; o.frequency.value=f; o.connect(lp); o.start(); droneNodes.push(o); });
+  lp.connect(g); g.connect(master); droneNodes.push(g);
+  if(level===3){ // 呼吸のようなうなり:ノイズ
+    const buf=ac.createBuffer(1, ac.sampleRate*2, ac.sampleRate), d=buf.getChannelData(0); let last=0;
+    for(let i=0;i<d.length;i++){ const w=Math.random()*2-1; last=(last+.02*w)/1.02; d[i]=last*3.5; }
+    const src=ac.createBufferSource(); src.buffer=buf; src.loop=true;
+    const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=180; bp.Q.value=1.2;
+    const ng=ac.createGain(); ng.gain.value=.35;
+    const lfo=ac.createOscillator(); lfo.frequency.value=.8; const lg=ac.createGain(); lg.gain.value=.25; lfo.connect(lg); lg.connect(ng.gain);
+    src.connect(bp); bp.connect(ng); ng.connect(master); src.start(); lfo.start(); droneNodes.push(src, lfo);
+  }
+}
+function stopDrone(){ droneNodes.forEach(n=>{ try{ n.stop ? n.stop() : n.disconnect(); }catch(e){} }); droneNodes=[]; }
+function kick(vol=.6){
+  const ac=audio(), o=ac.createOscillator(), g=ac.createGain();
+  o.frequency.setValueAtTime(130, ac.currentTime); o.frequency.exponentialRampToValueAtTime(38, ac.currentTime+.25);
+  g.gain.setValueAtTime(vol, ac.currentTime); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime+.35);
+  o.connect(g); g.connect(master); o.start(); o.stop(ac.currentTime+.4);
+}
+function heartbeat(level){
+  clearInterval(beatTimer); beatTimer=null; clearInterval(growlTimer); growlTimer=null;
+  if(level===2){ beatTimer=setInterval(()=>{ kick(.5); setTimeout(()=>kick(.35),180); }, 1100); }
+  if(level===3){
+    beatTimer=setInterval(()=>{ kick(.8); if(navigator.vibrate) navigator.vibrate(120); }, 520);
+    growlTimer=setInterval(()=>{ $('#flash').classList.remove('go'); void $('#flash').offsetWidth; $('#flash').classList.add('go'); tone(60,.4,{type:'sawtooth',vol:.25}); }, 2600);
+  }
+}
+function hangupTone(){ tone(400,.5,{type:'sine',vol:.15,decay:false}); tone(400,.5,{type:'sine',vol:.15,at:.75,decay:false}); tone(400,.5,{type:'sine',vol:.15,at:1.5,decay:false}); }
+function stopAllAudio(){ stopRing(); stopDrone(); clearInterval(beatTimer); clearInterval(growlTimer); beatTimer=growlTimer=null; if(navigator.vibrate) navigator.vibrate(0); }
+
+/* ========= 声(Web Speech) ========= */
+let voice=null;
+function pickVoice(){
+  const vs = speechSynthesis.getVoices().filter(v=>/^ja/i.test(v.lang));
+  const pref = ['Otoya','Ichiro','Hattori','Google 日本語','Microsoft Keita','Microsoft Ichiro','Kyoko','O-ren'];
+  for(const p of pref){ const v=vs.find(x=>x.name.includes(p)); if(v) return v; }
+  return vs[0]||null;
+}
+if('speechSynthesis' in window){ voice=pickVoice(); speechSynthesis.onvoiceschanged=()=>{ voice=pickVoice(); }; }
+const PITCH={1:.45, 2:.25, 3:.05}, RATE={1:.82, 2:.78, 3:.95}, VOL={1:1, 2:1, 3:1};
+function speak(text, lv){
+  return new Promise(res=>{
+    if(!('speechSynthesis' in window)){ setTimeout(res, 2200); return; }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text.replace(/[　…！？]/g, m=> m==='　'?'、':m));
+    u.lang='ja-JP'; if(voice) u.voice=voice;
+    u.pitch=PITCH[lv]; u.rate=RATE[lv]; u.volume=VOL[lv];
+    let done=false; const fin=()=>{ if(!done){ done=true; res(); } };
+    u.onend=fin; u.onerror=fin;
+    speechSynthesis.speak(u);
+    setTimeout(fin, 9000); // 保険
+  });
+}
+
+/* ========= 画面遷移 ========= */
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); $(id).classList.add('on'); }
+
+let level=1, speaking=false, cancelSpeak=false, autoTimer=null, clock=null, t0=0;
+
+$('#dial').onclick = ()=>{
+  audio(); // ユーザー操作内でAudioContextを作る
+  if('speechSynthesis' in window){ const u=new SpeechSynthesisUtterance(''); speechSynthesis.speak(u); } // iOS対策:発話の許可
+  show('#ring'); startRing();
+};
+$('#decline').onclick = ()=>{ stopRing(); show('#setup'); };
+$('#answer').onclick = ()=>{ stopRing(); startCall(); };
+
+async function startCall(){
+  level=1; cancelSpeak=false;
+  show('#call'); setLevelUI(1);
+  t0=Date.now(); clearInterval(clock);
+  clock=setInterval(()=>{ const s=Math.floor((Date.now()-t0)/1000); $('#timer').textContent=`おに　${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; },500);
+  updateButtons();
+  await sayAll(lines(1), 1);
+  scheduleAuto();
+}
+function scheduleAuto(){
+  clearTimeout(autoTimer);
+  if(cfg.auto>0 && level<cfg.maxlv) autoTimer=setTimeout(()=>escalate(), cfg.auto*1000);
+}
+async function sayAll(arr, lv){
+  speaking=true; updateButtons();
+  for(const t of arr){
+    if(cancelSpeak) break;
+    $('#bubble').textContent=t; $('#mouth').classList.add('talk');
+    await speak(t, lv);
+    $('#mouth').classList.remove('talk');
+    if(cancelSpeak) break;
+    await new Promise(r=>setTimeout(r, lv===3?350:700));
+  }
+  speaking=false; updateButtons();
+}
+function setLevelUI(lv){
+  const c=$('#call'); c.classList.remove('lv1','lv2','lv3'); c.classList.add('lv'+lv);
+  $('#bubble').classList.toggle('lv3', lv===3);
+  const oni=$('#oni'); oni.classList.remove('shake1','shake2'); if(lv===2) oni.classList.add('shake1'); if(lv===3) oni.classList.add('shake2');
+  oni.style.transform = lv===3 ? 'scale(1.18)' : lv===2 ? 'scale(1.08)' : 'scale(1)';
+  [1,2,3].forEach(i=> $('#d'+i).classList.toggle('on', i<=lv));
+  drone(lv); heartbeat(lv);
+}
+function updateButtons(){
+  $('#more').disabled = speaking || level>=cfg.maxlv;
+  $('#more').textContent = level>=cfg.maxlv ? '（じょうげん）' : '😈 もっとこわく';
+}
+async function escalate(){
+  if(speaking || level>=cfg.maxlv) return;
+  clearTimeout(autoTimer);
+  level++; setLevelUI(level);
+  if(level===3){ $('#flash').classList.add('go'); kick(1); if(navigator.vibrate) navigator.vibrate([300,100,300,100,600]); }
+  await sayAll(lines(level), level);
+  scheduleAuto();
+}
+$('#more').onclick = escalate;
+
+$('#forgive').onclick = async ()=>{
+  clearTimeout(autoTimer);
+  cancelSpeak=true; speechSynthesis.cancel(); await new Promise(r=>setTimeout(r,150)); cancelSpeak=false;
+  $('#forgive').disabled=true; $('#more').disabled=true;
+  setLevelUI(1); level=1;
+  await sayAll(forgiveLines(), 1);
+  endCall('🤝', 'おにと やくそく しました', 'いいこにするって、おにに やくそくしたね。えらい！');
+};
+$('#hang').onclick = ()=>{ cancelSpeak=true; speechSynthesis.cancel(); endCall('📵','でんわが きれました','鬼は「またかけるぞ…」と言っていました。'); };
+
+function endCall(emoji, title, msg){
+  clearTimeout(autoTimer); clearInterval(clock); stopAllAudio(); hangupTone();
+  $('#mouth').classList.remove('talk'); $('#forgive').disabled=false;
+  $('#endEmoji').textContent=emoji; $('#endTitle').textContent=title; $('#endMsg').textContent=msg;
+  show('#end');
+}
+$('#again').onclick = ()=>{ speechSynthesis.cancel(); stopAllAudio(); show('#setup'); };
+
+// 画面を閉じた/裏にした時は止める
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ stopAllAudio(); if('speechSynthesis' in window) speechSynthesis.cancel(); } });
+</script>
+</body>
+</html>
